@@ -1,0 +1,37 @@
+- name: Install x-ui-pro in secure and non-secure modes
+  hosts: all
+  become: yes
+  vars:
+    secure_mode: "no"       
+    country: "xx"         
+    subdomain: "{{ subdomain }}"
+
+  tasks:
+    - name: Install required packages
+      package:
+        name:
+          - wget
+          - curl
+        state: present
+
+    - name: Set cdn_mode based on secure_mode
+      set_fact:
+        cdn_mode: "{{ 'on' if secure_mode == 'yes' else 'off' }}"
+
+    - name: Download x-ui-pro.sh script to /tmp
+      get_url:
+        url: https://raw.githubusercontent.com/GFW4Fun/x-ui-pro/master/x-ui-pro.sh
+        dest: /tmp/x-ui-pro.sh
+        mode: '0755'
+
+    - name: Run x-ui-pro.sh with parameters (and respond to subdomain prompt)
+      expect:
+        command: "/bin/bash /tmp/x-ui-pro.sh -panel 1 -xuiver last -cdn {{ cdn_mode }} -secure {{ secure_mode }} -country {{ country }}"
+        responses:
+          "Enter available subdomain *": "{{ subdomain }}"
+        timeout: null
+      register: result
+
+    - name: Output result
+      debug:
+        var: result.stdout
